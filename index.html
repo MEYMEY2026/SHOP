@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mey Mey STORE</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTML2Canvas & jsPDF for Khmer Support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        accent: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --khmer-font: 'Kantumruy Pro', sans-serif;
+            --english-font: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            font-family: var(--english-font);
+            background-color: #fafafa;
+            color: #1a1a1a;
+            transition: background-color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .kh-font {
+            font-family: var(--khmer-font) !important;
+        }
+
+        body.kh {
+            font-family: var(--khmer-font);
+        }
+
+        body.dark {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .product-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .product-image-container {
+            overflow: hidden;
+            border-radius: 16px;
+            background: #f3f4f6;
+            position: relative;
+            aspect-ratio: 3/4;
+        }
+
+        .dark .product-image-container {
+            background: #1e293b;
+        }
+
+        .product-card:hover .product-image-container img {
+            transform: scale(1.08);
+        }
+
+        .category-pill {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .category-pill.active {
+            background-color: #0f172a;
+            color: white;
+            border-color: #0f172a;
+        }
+
+        .dark .category-pill.active {
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-color: #f8fafc;
+        }
+
+        .custom-input {
+            transition: all 0.2s ease;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            outline: none;
+        }
+
+        .dark .custom-input {
+            background: #1e293b;
+            border-color: #334155;
+            color: white;
+        }
+
+        .custom-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        #img-preview {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dark #img-preview {
+            border-color: #334155;
+        }
+
+        #img-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .size-btn.active {
+            background-color: #0f172a;
+            color: white;
+            border-color: #0f172a;
+        }
+
+        .dark .size-btn.active {
+            background-color: white;
+            color: #0f172a;
+            border-color: white;
+        }
+
+        /* Hidden Invoice Template Styles */
+        #invoice-template {
+            width: 800px;
+            background: white;
+            padding: 40px;
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <!-- Hidden Invoice Template for PDF Conversion -->
+    <div id="invoice-template" class="kh-font">
+        <div class="flex justify-between items-start border-b-4 border-slate-900 pb-6 mb-8">
+            <div>
+                <h1 class="text-4xl font-black text-slate-900 mb-1">MEY MEY STORE</h1>
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Modern Apparel Store</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-2xl font-black text-slate-900">វិក្កយបត្រ / INVOICE</h2>
+                <p class="text-sm text-slate-600" id="inv-id-display"></p>
+                <p class="text-sm text-slate-600" id="inv-date-display"></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-10 mb-10">
+            <div>
+                <h3 class="font-bold text-slate-400 text-xs uppercase tracking-widest mb-3 border-b pb-1">អតិថិជន /
+                    CUSTOMER</h3>
+                <p class="font-bold text-lg" id="inv-name-display"></p>
+                <p class="text-slate-700" id="inv-phone-display"></p>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-400 text-xs uppercase tracking-widest mb-3 border-b pb-1">
+                    ទីតាំងដឹកជញ្ជូន / DELIVERY</h3>
+                <p class="text-slate-700 leading-relaxed" id="inv-address-display"></p>
+            </div>
+        </div>
+
+        <table class="w-full mb-10">
+            <thead>
+                <tr class="bg-slate-900 text-white">
+                    <th class="py-3 px-4 text-left text-sm font-bold">ផលិតផល / DESCRIPTION</th>
+                    <th class="py-3 px-4 text-center text-sm font-bold">ទំហំ / SIZE</th>
+                    <th class="py-3 px-4 text-right text-sm font-bold">តម្លៃ / PRICE</th>
+                </tr>
+            </thead>
+            <tbody id="inv-items-display"></tbody>
+        </table>
+
+        <div class="flex justify-end border-t-2 border-slate-100 pt-6">
+            <div class="text-right">
+                <p class="text-slate-400 font-bold text-xs uppercase mb-1">សរុបរួម / TOTAL AMOUNT</p>
+                <p class="text-4xl font-black text-slate-900" id="inv-total-display"></p>
+            </div>
+        </div>
+
+        <div class="mt-20 pt-10 border-t border-slate-100 text-center">
+            <p class="text-slate-400 text-xs">សូមអរគុណសម្រាប់ការគាំទ្រហាង MEY MEY! / Thank you for shopping with us.</p>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="glass sticky top-0 z-[100] border-b border-gray-100 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center">
+                    <span id="logo-btn"
+                        class="text-2xl font-black tracking-tighter text-slate-900 dark:text-white uppercase select-none cursor-pointer">MEY
+                        MEY</span>
+                </div>
+
+                <div class="hidden md:flex flex-grow max-w-md mx-8">
+                    <div class="relative w-full">
+                        <input type="text" id="search-input" oninput="handleSearch()" placeholder="ស្វែងរកទំនិញ..."
+                            class="w-full custom-input py-2.5 px-10 rounded-2xl text-sm">
+                        <svg class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <button onclick="toggleDarkMode()"
+                        class="p-2.5 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-full">
+                        <button onclick="setLang('en')" id="btn-en"
+                            class="px-3 py-1 text-[10px] font-bold rounded-full transition-all bg-white shadow-sm">EN</button>
+                        <button onclick="setLang('kh')" id="btn-kh"
+                            class="px-3 py-1 text-[10px] font-bold rounded-full transition-all text-slate-400">KH</button>
+                    </div>
+                    <button onclick="toggleCart(true)"
+                        class="group relative p-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full hover:scale-105 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
+                        <span id="cart-count"
+                            class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-900">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Category Filters -->
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 sticky top-20 z-[90]">
+        <div id="category-bar" class="max-w-7xl mx-auto px-4 overflow-x-auto flex space-x-2 py-4 no-scrollbar"></div>
+    </div>
+
+    <!-- Main Store Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+        <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"></div>
+        <div id="no-products" class="hidden flex flex-col items-center justify-center py-24 text-center">
+            <p class="text-slate-500 dark:text-slate-400 font-medium text-lg">មិនមានផលិតផលដែលអ្នកចង់រកនោះទេ</p>
+        </div>
+    </main>
+
+    <!-- Merchant Portal -->
+    <div id="admin-modal" class="fixed inset-0 z-[500] hidden">
+        <div class="absolute inset-0 bg-slate-900/95 backdrop-blur-xl" onclick="closeAdmin()"></div>
+        <div
+            class="absolute inset-4 md:inset-10 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-6 border-b dark:border-slate-800 flex justify-between items-center">
+                <h2 class="text-xl font-black dark:text-white uppercase">Merchant Portal</h2>
+                <div class="flex gap-2">
+                    <button onclick="toggleCatManager()"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase">Manage
+                        Categories</button>
+                    <button onclick="closeAdmin()"
+                        class="px-4 py-2 bg-slate-100 dark:bg-slate-800 dark:text-white rounded-xl font-bold text-xs">CLOSE</button>
+                </div>
+            </div>
+
+            <div id="admin-content" class="flex-grow overflow-y-auto p-6 grid lg:grid-cols-2 gap-8">
+                <!-- Add Product Section -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-blue-600 text-xs tracking-widest uppercase">ADD PRODUCT</h3>
+                    <label id="img-preview"
+                        class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Upload Image</span>
+                        <input type="file" id="img-upload" accept="image/*" class="hidden"
+                            onchange="previewImage(this)">
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="add-name-en" placeholder="Product Name (EN)"
+                            class="custom-input p-3 rounded-xl text-sm">
+                        <input type="text" id="add-name-kh" placeholder="ឈ្មោះផលិតផល (KH)"
+                            class="custom-input p-3 rounded-xl text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <textarea id="add-desc-en" placeholder="Details (EN)"
+                            class="custom-input p-3 rounded-xl text-sm h-20 resize-none"></textarea>
+                        <textarea id="add-desc-kh" placeholder="ព័ត៌មានលម្អិត (KH)"
+                            class="custom-input p-3 rounded-xl text-sm h-20 resize-none"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="add-price" placeholder="Price ($)"
+                            class="custom-input p-3 rounded-xl text-sm">
+                        <select id="add-category-select" class="custom-input p-3 rounded-xl text-sm"></select>
+                    </div>
+                    <button onclick="addProduct()"
+                        class="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-sm shadow-lg">Post
+                        Product</button>
+                </div>
+
+                <!-- Product List Section -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-rose-500 text-xs tracking-widest uppercase">PRODUCT LIST</h3>
+                    <div id="admin-product-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Manager (Internal Overlay) -->
+            <div id="cat-manager-panel"
+                class="hidden absolute inset-0 bg-white dark:bg-slate-900 z-10 p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-black text-xl dark:text-white uppercase">Category Management</h3>
+                    <button onclick="toggleCatManager()"
+                        class="text-xs font-bold text-slate-400 underline uppercase">Back to Products</button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <div
+                            class="p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                            <h4 class="text-xs font-black text-blue-600 mb-4 uppercase">New Category</h4>
+                            <input type="text" id="new-cat-name" placeholder="Category Name"
+                                class="custom-input p-3 rounded-xl text-sm w-full mb-3">
+                            <label class="flex items-center gap-3 cursor-pointer select-none">
+                                <input type="checkbox" id="new-cat-size" class="w-5 h-5 rounded accent-blue-600">
+                                <span class="text-xs font-bold dark:text-white uppercase">Enable Size Selection (S, M,
+                                    L, XL)</span>
+                            </label>
+                            <button onclick="saveCategory()"
+                                class="w-full mt-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3 rounded-xl font-black uppercase text-xs">Add
+                                Category</button>
+                        </div>
+                    </div>
+                    <div id="cat-list-display" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Modal -->
+    <div id="details-modal" class="fixed inset-0 z-[300] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleDetails(null, false)"></div>
+        <div
+            class="absolute inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-4xl bg-white dark:bg-slate-900 rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+            <div class="w-full md:w-1/2 bg-gray-100 dark:bg-slate-800 h-80 md:h-auto">
+                <img id="detail-img" src="" class="w-full h-full object-cover">
+            </div>
+            <div class="w-full md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto">
+                <div id="detail-category" class="text-[10px] font-black uppercase text-blue-600 mb-2"></div>
+                <h2 id="detail-name" class="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 leading-tight">
+                </h2>
+                <p id="detail-price" class="text-2xl font-bold text-slate-900 dark:text-white mb-4"></p>
+                <p id="detail-desc" class="text-sm text-slate-500 dark:text-slate-400 mb-8 whitespace-pre-wrap"></p>
+
+                <div id="size-selection-area" class="mb-10 hidden">
+                    <p class="text-[10px] font-black uppercase text-slate-400 mb-4">Select Size (ជម្រើសទំហំ)</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="selectSize('S')"
+                            class="size-btn flex-1 min-w-[60px] h-12 border-2 border-slate-100 dark:border-slate-800 dark:text-white rounded-xl font-bold">S</button>
+                        <button onclick="selectSize('M')"
+                            class="size-btn flex-1 min-w-[60px] h-12 border-2 border-slate-100 dark:border-slate-800 dark:text-white rounded-xl font-bold">M</button>
+                        <button onclick="selectSize('L')"
+                            class="size-btn flex-1 min-w-[60px] h-12 border-2 border-slate-100 dark:border-slate-800 dark:text-white rounded-xl font-bold">L</button>
+                        <button onclick="selectSize('XL')"
+                            class="size-btn flex-1 min-w-[60px] h-12 border-2 border-slate-100 dark:border-slate-800 dark:text-white rounded-xl font-bold">XL</button>
+                    </div>
+                </div>
+
+                <button id="detail-add-btn"
+                    class="mt-auto w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-transform">ADD
+                    TO CART</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shopping Cart -->
+    <div id="cart-modal" class="fixed inset-0 z-[200] hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="toggleCart(false)"></div>
+        <div id="cart-panel"
+            class="absolute right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-slate-900 shadow-2xl flex flex-col translate-x-full transition-transform duration-300">
+            <div class="p-6 border-b dark:border-slate-800 flex justify-between items-center">
+                <h3 class="text-xl font-bold dark:text-white uppercase tracking-wider">Shopping Cart</h3>
+                <button onclick="toggleCart(false)" class="p-2 text-slate-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div id="cart-items" class="flex-grow overflow-y-auto p-6 space-y-4 no-scrollbar"></div>
+            <div class="p-6 border-t dark:border-slate-800 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="cust-name" placeholder="Full Name"
+                        class="custom-input p-3 rounded-xl text-sm">
+                    <input type="tel" id="cust-phone" placeholder="Phone Number"
+                        class="custom-input p-3 rounded-xl text-sm">
+                </div>
+                <textarea id="cust-address" placeholder="Delivery Address / Landmark"
+                    class="custom-input p-3 rounded-xl text-sm w-full h-20 resize-none"></textarea>
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-400 uppercase text-[10px]">Grand Total</span>
+                    <span id="cart-total-value" class="text-3xl font-black dark:text-white">$0.00</span>
+                </div>
+                <button id="checkout-btn" onclick="handleCheckout()"
+                    class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-black uppercase text-sm shadow-xl">Confirm
+                    Purchase</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 bg-slate-900 text-white rounded-2xl shadow-2xl opacity-0 transition-all z-[600] font-bold pointer-events-none">
+    </div>
+
+    <script>
+        const ADMIN_PASS = "MEYMEYONLINESTORE2026";
+        const BOT_TOKEN = "8550272280:AAGBUV0I5z176U6ymnhZ6rF85LOHQr3Vs2U";
+        const CHAT_ID = "6224393956";
+        const TELEGRAM_PERSONAL = "Sa_vy1410";
+
+        // Global State
+        let categories = JSON.parse(localStorage.getItem('mm_categories')) || [
+            { name: "Clothing", hasSizes: true },
+            { name: "Shoes", hasSizes: true },
+            { name: "Accessories", hasSizes: false }
+        ];
+        let products = JSON.parse(localStorage.getItem('mm_products')) || [];
+        let cart = [];
+        let currentLang = 'en';
+        let currentCategory = 'All';
+        let searchQuery = '';
+        let selectedSize = null;
+        let uploadedImgBase64 = null;
+        let pressTimer;
+
+        // Admin Access Logic
+        const logo = document.getElementById('logo-btn');
+        logo.addEventListener('mousedown', () => pressTimer = setTimeout(openAdmin, 2000));
+        logo.addEventListener('touchstart', () => pressTimer = setTimeout(openAdmin, 2000));
+        logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+        logo.addEventListener('touchend', () => clearTimeout(pressTimer));
+
+        function openAdmin() {
+            const pass = prompt("Merchant Key:");
+            if (pass === ADMIN_PASS) {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                renderAdminUI();
+                renderCategoryList();
+            }
+        }
+        function closeAdmin() { document.getElementById('admin-modal').classList.add('hidden'); }
+
+        // Category Management
+        function toggleCatManager() {
+            const panel = document.getElementById('cat-manager-panel');
+            panel.classList.toggle('hidden');
+            renderCategoryList();
+        }
+
+        function saveCategory() {
+            const name = document.getElementById('new-cat-name').value.trim();
+            const hasSizes = document.getElementById('new-cat-size').checked;
+            if (!name) return showToast("Enter category name");
+            if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) return showToast("Exists");
+
+            categories.push({ name, hasSizes });
+            localStorage.setItem('mm_categories', JSON.stringify(categories));
+            document.getElementById('new-cat-name').value = '';
+            document.getElementById('new-cat-size').checked = false;
+            renderCategoryList();
+            renderCategoryBar();
+            renderAdminUI();
+            showToast("Category Saved");
+        }
+
+        function removeCategory(name) {
+            if (confirm(`Delete ${name}? All products in this category will remain but the filter will be gone.`)) {
+                categories = categories.filter(c => c.name !== name);
+                localStorage.setItem('mm_categories', JSON.stringify(categories));
+                renderCategoryList();
+                renderCategoryBar();
+                renderAdminUI();
+            }
+        }
+
+        function renderCategoryList() {
+            document.getElementById('cat-list-display').innerHTML = categories.map(c => `
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <div>
+                        <p class="font-bold dark:text-white">${c.name}</p>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold">${c.hasSizes ? 'Sizes Enabled' : 'No Sizes'}</p>
+                    </div>
+                    <button onclick="removeCategory('${c.name}')" class="text-rose-500 text-xs font-bold">DELETE</button>
+                </div>
+            `).join('');
+        }
+
+        // Store UI Rendering
+        function renderCategoryBar() {
+            const bar = document.getElementById('category-bar');
+            bar.innerHTML = ["All", ...categories.map(c => c.name)].map(cat => `
+                <button onclick="filterCat('${cat}')" class="category-pill whitespace-nowrap px-6 py-2.5 rounded-full text-xs font-bold uppercase ${currentCategory === cat ? 'active' : 'bg-gray-100 dark:bg-slate-800 dark:text-slate-400'}">${cat}</button>
+            `).join('');
+        }
+
+        function filterCat(cat) { currentCategory = cat; renderCategoryBar(); renderProducts(); }
+
+        function handleSearch() {
+            searchQuery = document.getElementById('search-input').value.toLowerCase();
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            let filtered = currentCategory === 'All' ? products : products.filter(p => p.category === currentCategory);
+            if (searchQuery) filtered = filtered.filter(p => p.name.en.toLowerCase().includes(searchQuery) || p.name.kh.includes(searchQuery));
+
+            document.getElementById('no-products').classList.toggle('hidden', filtered.length > 0);
+            grid.innerHTML = filtered.map(p => `
+                <div class="product-card group cursor-pointer" onclick="toggleDetails(${p.id}, true)">
+                    <div class="product-image-container shadow-sm mb-4"><img src="${p.img}" class="w-full h-full object-cover"></div>
+                    <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">${p.category}</p>
+                    <h3 class="font-bold text-sm dark:text-white truncate mb-1">${p.name[currentLang]}</h3>
+                    <p class="font-black text-base dark:text-white">$${p.price.toFixed(2)}</p>
+                </div>
+            `).join('');
+        }
+
+        // Product Management
+        function previewImage(input) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImgBase64 = e.target.result;
+                document.getElementById('img-preview').innerHTML = `<img src="${uploadedImgBase64}" class="w-full h-full object-cover">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function addProduct() {
+            const en = document.getElementById('add-name-en').value,
+                price = parseFloat(document.getElementById('add-price').value),
+                category = document.getElementById('add-category-select').value;
+
+            if (!en || isNaN(price) || !uploadedImgBase64) return showToast("Missing info or image");
+
+            products.unshift({
+                id: Date.now(),
+                category,
+                name: { en, kh: document.getElementById('add-name-kh').value || en },
+                desc: { en: document.getElementById('add-desc-en').value, kh: document.getElementById('add-desc-kh').value },
+                price,
+                img: uploadedImgBase64
+            });
+
+            localStorage.setItem('mm_products', JSON.stringify(products));
+            renderAdminUI();
+            renderProducts();
+            showToast("Product Added");
+
+            // Reset form
+            document.getElementById('add-name-en').value = '';
+            document.getElementById('add-name-kh').value = '';
+            document.getElementById('add-price').value = '';
+            uploadedImgBase64 = null;
+            document.getElementById('img-preview').innerHTML = `<span class="text-xs font-bold text-slate-400 uppercase">Upload Image</span>`;
+        }
+
+        function renderAdminUI() {
+            document.getElementById('add-category-select').innerHTML = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            document.getElementById('admin-product-list').innerHTML = products.map(p => `
+                <div class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <img src="${p.img}" class="w-12 h-12 rounded-lg object-cover">
+                    <div class="flex-grow">
+                        <p class="text-xs font-bold dark:text-white truncate">${p.name.en}</p>
+                        <p class="text-[10px] text-blue-500 font-bold uppercase">${p.category}</p>
+                    </div>
+                    <button onclick="removeProduct(${p.id})" class="text-rose-500 font-bold text-[10px] uppercase">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeProduct(id) {
+            if (confirm("Remove this item?")) {
+                products = products.filter(p => p.id !== id);
+                localStorage.setItem('mm_products', JSON.stringify(products));
+                renderAdminUI();
+                renderProducts();
+            }
+        }
+
+        // Customer Logic
+        function toggleDetails(id, show) {
+            const modal = document.getElementById('details-modal');
+            selectedSize = null;
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+
+            if (show) {
+                const p = products.find(x => x.id === id);
+                document.getElementById('detail-img').src = p.img;
+                document.getElementById('detail-category').innerText = p.category;
+                document.getElementById('detail-name').innerText = p.name[currentLang];
+                document.getElementById('detail-price').innerText = `$${p.price.toFixed(2)}`;
+                document.getElementById('detail-desc').innerText = p.desc?.[currentLang] || "No additional description.";
+
+                const catInfo = categories.find(c => c.name === p.category);
+                document.getElementById('size-selection-area').classList.toggle('hidden', !catInfo?.hasSizes);
+
+                document.getElementById('detail-add-btn').onclick = () => addToCart(p);
+                modal.classList.remove('hidden');
+            } else modal.classList.add('hidden');
+        }
+
+        function selectSize(s) {
+            selectedSize = s;
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.innerText === s));
+        }
+
+        function addToCart(p) {
+            const catInfo = categories.find(c => c.name === p.category);
+            if (catInfo?.hasSizes && !selectedSize) return showToast("Please select a size first!");
+
+            cart.push({ ...p, selectedSize: selectedSize || 'N/A' });
+            updateCart();
+            toggleDetails(null, false);
+            showToast("Added to Cart!");
+        }
+
+        function removeFromCart(i) { cart.splice(i, 1); updateCart(); }
+
+        function updateCart() {
+            document.getElementById('cart-count').innerText = cart.length;
+            document.getElementById('cart-items').innerHTML = cart.map((item, i) => `
+                <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
+                    <img src="${item.img}" class="w-14 h-14 rounded-lg object-cover">
+                    <div class="flex-grow">
+                        <p class="text-xs font-bold dark:text-white">${item.name[currentLang]}</p>
+                        <p class="text-[10px] text-slate-400 uppercase font-black">Size: ${item.selectedSize}</p>
+                    </div>
+                    <span class="font-bold text-sm dark:text-white">$${item.price.toFixed(2)}</span>
+                    <button onclick="removeFromCart(${i})" class="w-8 h-8 flex items-center justify-center text-rose-500 rounded-lg hover:bg-rose-50 transition-colors">✕</button>
+                </div>
+            `).join('');
+            document.getElementById('cart-total-value').innerText = `$${cart.reduce((s, i) => s + i.price, 0).toFixed(2)}`;
+        }
+
+        function toggleCart(s) {
+            const m = document.getElementById('cart-modal'), p = document.getElementById('cart-panel');
+            if (s) { m.classList.remove('hidden'); setTimeout(() => p.classList.remove('translate-x-full'), 10); }
+            else { p.classList.add('translate-x-full'); setTimeout(() => m.classList.add('hidden'), 300); }
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m;
+            t.classList.replace('opacity-0', 'opacity-100');
+            t.classList.add('translate-y-[-10px]');
+            setTimeout(() => {
+                t.classList.replace('opacity-100', 'opacity-0');
+                t.classList.remove('translate-y-[-10px]');
+            }, 2500);
+        }
+
+        // Checkout & Telegram Integration
+        async function handleCheckout() {
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            const address = document.getElementById('cust-address').value.trim();
+
+            if (!name || !phone || !address || cart.length === 0) return showToast("Enter all delivery details");
+
+            const btn = document.getElementById('checkout-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESSING...";
+            btn.disabled = true;
+
+            const total = cart.reduce((s, i) => s + i.price, 0);
+            const orderId = "MM-" + Math.floor(Math.random() * 1000000);
+            const date = new Date().toLocaleDateString('km-KH');
+
+            // Populate Hidden Invoice
+            document.getElementById('inv-id-display').innerText = `ID: ${orderId}`;
+            document.getElementById('inv-date-display').innerText = `កាលបរិច្ឆេទ: ${date}`;
+            document.getElementById('inv-name-display').innerText = name;
+            document.getElementById('inv-phone-display').innerText = phone;
+            document.getElementById('inv-address-display').innerText = address;
+            document.getElementById('inv-total-display').innerText = `$${total.toFixed(2)}`;
+            document.getElementById('inv-items-display').innerHTML = cart.map(i => `
+                <tr class="border-b border-slate-100">
+                    <td class="py-3 px-4 text-sm font-medium">${i.name.kh || i.name.en}</td>
+                    <td class="py-3 px-4 text-center text-sm">${i.selectedSize}</td>
+                    <td class="py-3 px-4 text-right text-sm font-bold">$${i.price.toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            try {
+                // Render Canvas
+                const canvas = await html2canvas(document.getElementById('invoice-template'), {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210, imgHeight = (canvas.height * imgWidth) / canvas.width;
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+
+                const blob = pdf.output('blob');
+                const fd = new FormData();
+                fd.append('chat_id', CHAT_ID);
+                fd.append('document', blob, `Order-${orderId}.pdf`);
+                fd.append('caption', `🆕 NEW ORDER: #${orderId}\n━━━━━━━━━━━━━━━━\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${address}\n💰 Total: $${total.toFixed(2)}\n━━━━━━━━━━━━━━━━\n(Sent via Mey Mey Store)`);
+
+                // Send to Admin Bot
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: fd });
+
+                // Open Customer's Telegram to Personal Profile
+                const tMsg = `Hello Mey Mey! I've placed an order (#${orderId})\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nTotal: $${total.toFixed(2)}\nPlease confirm my order!`;
+                window.open(`https://t.me/${TELEGRAM_PERSONAL}?text=${encodeURIComponent(tMsg)}`, '_blank');
+
+                cart = [];
+                updateCart();
+                toggleCart(false);
+                showToast("Order Sent Successfully!");
+
+                // Clean up fields
+                document.getElementById('cust-name').value = '';
+                document.getElementById('cust-phone').value = '';
+                document.getElementById('cust-address').value = '';
+
+            } catch (e) {
+                console.error(e);
+                showToast("Checkout Failed. Try again.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function setLang(l) {
+            currentLang = l;
+            document.body.classList.toggle('kh', l === 'kh');
+            document.getElementById('btn-en').className = `px-3 py-1 text-[10px] font-bold rounded-full transition-all ${l === 'en' ? 'bg-white shadow-sm' : 'text-slate-400'}`;
+            document.getElementById('btn-kh').className = `px-3 py-1 text-[10px] font-bold rounded-full transition-all ${l === 'kh' ? 'bg-white shadow-sm' : 'text-slate-400'}`;
+            renderProducts();
+        }
+
+        function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
+
+        // Initialize
+        renderCategoryBar();
+        renderProducts();
+    </script>
+</body>
+
+</html>
